@@ -1,0 +1,670 @@
+______________________________________________________
+------------------------------------------------------
+                       PROYECTO:
+------------------------------------------------------
+1.-comunicaciones entre centralitas
+2.-configuraciones telefono IP
+3.-Prender el foco 
+4.-Consulta del ultimo dato en la base de datos
+5.-Formulario - ENCUESTA SATISFACCIÓN DE CLASE;
+6.- colocar un chat bot, para permitir hacer alertas y llamadas.
+
+_______________________________________________________
+EXTENSIONES PARA EL PROYECTO - PLAN DE MARCADO:
+1.- Comunicaciones por troncales ---- PC JEAN --- 101,100 ---- PC JOSUE --- 201,200
+
+2.- telefono ip --- 102 , 202 
+ 
+3.-Prender el foco  ---- 800  OPCIONES: 1.ENCENDIDO , 2.APAGADO
+
+4.-Consulta del ultimo dato en la base de datos  -----900  
+OPCIONES: 1.temperatura 2.humedad 3.luz 4.voltaje
+
+5.-Formulario - ENCUESTA SATISFACCIÓN DE CLASE ---- 850 
+OPCIONES: 1.Bueno 2.Regular 3. Malo
+ 
+6.- CHAT BOT CON MQQT
+
+
+
+
+_______________________________________________________
+NOTAS:
+COMANDOS DENTRO DE ASTERISK:
+
+agi set debug on
+pjsip show endpoints
+dialplan show
+core set verbose 3
+iax2 show peers
+
+-SIEMPRE PARAR EL FIREWALLD DEL SISTEMA;
+
+systemctl stop firewalld
+
+-PARA CARGAR LOS ARCHIVOS DENTRO DEL CLI SIEMPRE:
+SERVER*CLI> reload
+SERVER*CLI> pjsip reload
+SERVER*CLI> extensions reload
+SERVER*CLI> func_odbc reload
+______________________________________________________
+------------------------------------------------------
+            CONFIGURACIONES DEL PROYECTO:
+------------------------------------------------------
+
+-1-COMUNICACIONES ENTRE CENTRALITAS;
+------------------------------------------------------
+configuración IAX:
+ENTRE DOS SERVIDORES:
+
+-.-.-.-.-.-.-.-.-.-.-.-.-.-
+SERVIDOR A:
+
+cd /etc/asterisk
+nano iax.conf
+
+_____________________________________________________________
+
+
+[serverB_in]
+type=user ; llamadas del serv B al *
+auth=md5
+secret=1234 ;se detalla el password
+context=from-iax ; contexto que entran las llamadas de B
+
+[serverB_out]
+type=peer
+host=192.168.7.217
+auth=md5
+secret=1234   ; se detalla el password
+username=serverA_in
+
+
+_____________________________________________________________
+
+nano extensions.conf
+
+_____________________________________________________________
+
+[from-iax]
+
+exten => _7XXX,1,Dial(IAX2/serverB_out/${EXTEN:1},30)
+exten => _7XXX,2,Congestion
+
+Esta configuración permite que al discar 7XXX en el servidor A, se
+haga una llamada al servidor B con ese número pero quitándole el
+prefijo 7.
+
+--------------------------------------------------------------
+
+SERVIDOR B:
+-.-.-.-.-.-.-.-.-.-.-.-.-.-
+
+cd /etc/asterisk
+nano iax.conf
+
+______________________________________________________________
+
+
+[serverA_in]
+type=user
+auth=md5
+secret=1234
+context=from-iax
+
+[serverA_out]
+type=peer
+host=192.168.7.79
+auth=md5
+secret=1234
+username=serverB_in
+
+______________________________________________________________
+
+nano extensions.conf
+
+______________________________________________________________
+
+[from-iax]
+exten => _8XX,1,Dial(IAX2/serverA_out/${EXTEN:1},30)
+exten => _8XX,2,Congestion
+
+
+
+
+
+______________________________________________________
+------------------------------------------------------
+
+2.-configuraciones telefono IP
+------------------------------------------------------
+
+
+
+https://jiuch.blogspot.com/2007/08/configuracin-de-un-telfono-cisco-7911g.html
+
+
+
+
+
+
+______________________________________________________
+------------------------------------------------------
+-3-PRENDER EL FOCO;
+------------------------------------------------------
+CONEXION POR PETIFICIONES HTTP, MEDIANTE TCP/IP WIFI;
+
+-CODIGO DE ESP8266:
+______________________________________________________
+
+#include <ESP8266WiFi.h>
+#include <ESP8266WebServer.h>
+
+const char* ssid = "LEON-RED";
+const char* password = "76697978";
+
+ESP8266WebServer server(80);
+
+const int focoPin = 4; // Pin digital donde está conectado el LED
+
+void setup() {
+  Serial.begin(115200);
+  WiFi.begin(ssid, password);
+
+  Serial.print("Connecting to WiFi");
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+
+  Serial.println("\nWiFi connected");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+
+  pinMode(focoPin, OUTPUT);
+  digitalWrite(focoPin, LOW); // Apaga el FOCO al inicio
+
+  server.on("/encender", []() {
+    Serial.println("Received request to /encender");
+    digitalWrite(focoPin, HIGH); // HIGH enciende el FOCO
+    server.send(200, "text/plain", "FOCO Encendido");
+  });
+
+  server.on("/apagar", []() {
+    Serial.println("Received request to /apagar");
+    digitalWrite(focoPin, LOW); // LOW apaga el FOCO
+    server.send(200, "text/plain", "FOCO Apagado");
+  });
+
+  server.onNotFound([]() {
+    Serial.println("Received request to unknown path");
+    server.send(404, "text/plain", "Not Found");
+  });
+
+  server.begin();
+  Serial.println("HTTP server started");
+}
+
+void loop() {
+  server.handleClient();
+}
+
+_______________________________________________________________
+----------------------------------------------------------------
+EN EL SERVIDOR DE ALMA LINUX:
+
+cd /etc/asterisk
+nano extensiones.conf
+
+GRABAR UN AUDIO, Y DESPUES ESCUCHARLO LLAMANDO A UNA EXTENSION
+----------------------------------------------------------------
+exten => 808,1,record(audio_esp.gsm,6)
+	
+exten => 809,1,answer()
+	same => n,playback(audio_esp)
+	same => n,hangup()
+	
+----------------------------------------------------------------
+
+----------------------------------------------------------------
+exten => 808,1,record(esc_op.gsm,3)
+	
+exten => 809,1,answer()
+	same => n,playback(esc_op)
+	same => n,hangup()
+	
+----------------------------------------------------------------
+
+----------------------------------------------------------------
+exten => 808,1,record(led-on.gsm,3)
+	
+exten => 809,1,answer()
+	same => n,playback(led-on)
+	same => n,hangup()
+	
+----------------------------------------------------------------
+
+----------------------------------------------------------------
+exten => 808,1,record(led-off.gsm,3)
+	
+exten => 809,1,answer()
+	same => n,playback(led-off)
+	same => n,hangup()
+	
+----------------------------------------------------------------
+NOTA:
+GRABAR AUDIO PARA "OPCION INCORRECTA" EN CASO DE NO TENER; nombre para el archivo; invalido_cs
+_______________________________________________________________
+
+
+sudo yum install curl
+curl --version
+
+cd /etc/asterisk
+nano extensiones.conf
+
+-AGREGAR LA DIRECCIÓN IP DE LA ESP8266, QUE SALE AL CONECTARSE LA RED:
+..........
+WiFi connected
+IP address: 
+192.168.7.3
+
+ESP-MENU
+------------------------------------------------------------------
+
+;ENCENDER UN FOCO -  EXTENSION
+exten => 800,1,Answer()
+ same => 2,Playback(audio_esp) ; Un mensaje de bienvenida grabado
+ same => 3,Read(choice,esc_op,1)   ; Lee la elección del usuario (1 o 2)
+ same => 4,NoOp(Opción elegida: ${choice})
+ same => 5,GotoIf($[${choice} = 1]?encender:check_2)
+
+exten => 800,6(check_2),GotoIf($[${choice} = 2]?apagar:incorrecto)
+
+
+; Encender el LED
+exten => 800,n(encender),NoOp(Enviando solicitud para encender el LED)
+ same => n,System(curl -X GET http://192.168.7.3/encender)
+ same => n,Playback(led-on)  ; Un mensaje grabado que diga "LED encendido"
+ same => n,Hangup()
+
+; Apagar el LED
+exten => 800,n(apagar),NoOp(Enviando solicitud para apagar el LED)
+ same => n,System(curl -X GET http://192.168.7.3/apagar)
+ same => n,Playback(led-off) ; Un mensaje grabado que diga "LED apagado"
+ same => n,Hangup()
+
+; Opción incorrecta
+exten => 800,n(incorrecto),NoOp(Opción incorrecta seleccionada)
+ same => n,Playback(invalido_cs) ; Un mensaje grabado que diga "Opción incorrecta"
+ same => n,Hangup()
+
+
+
+----------------------------------------------------------------------
+
+asterisk -v
+asterisk -rvvv
+
+CLI>reload
+
+
+
+
+
+
+______________________________________________________
+------------------------------------------------------
+4.-CONSULTA DEL ULTIMO DATO DE LA BASE DE DATOS;
+------------------------------------------------------
+VERIFICAR CONEXION CON LA BASE DE DATOS:
+isql -v MariaDBcliente
+
+DENTRO DE ASTERISK:
+asterisk -v
+asterisk -rvvvvv
+
+SERVER*CLI> odbc show all
+
+En el servidor de ALMA Linux:
+
+cd /etc/asterisk
+
+nano func_odbc.conf
+
+---------------------------------------------------------------
+[UltimoDato]
+dsn=asterisk
+readsql=SELECT ${ARG1} FROM sensor ORDER BY id DESC LIMIT 1
+---------------------------------------------------------------
+
+nano extensions.conf
+
+--------------------------------------------------------------
+		GRABACIONES DE AUDIO:
+
+_________________________________________________________________
+GRABAR UN AUDIO, Y DESPUES ESCUCHARLO LLAMANDO A UNA EXTENSION:
+----------------------------------------------------------------
+exten => 808,1,record(welcome_cons.gsm,3)
+	
+exten => 809,1,answer()
+	same => n,playback(welcome_cons)
+	same => n,hangup()
+----------------------------------------------------------------
+exten => 808,1,record(consulta_UD.gsm,6)
+	
+exten => 809,1,answer()
+	same => n,playback(consulta_UD)
+	same => n,hangup()
+
+----------------------------------------------------------------
+
+-----------------------------------------------------------------
+exten => 808,1,record(invalido_cs.gsm,3)
+
+exten => 809,1,answer()
+	same => n,playback(invalido_cs)
+	same => n,hangup()
+
+-----------------------------------------------------------------
+AUDIOS PARA TEMPERATURA, HUMEDAD, LUZ Y VOLTAJE:
+
+-----------------------------------------------------------------
+exten => 808,1,record(temperature-is.gsm,3)
+
+exten => 809,1,answer()
+	same => n,playback(temperature-is)
+	same => n,hangup()
+
+-----------------------------------------------------------------
+-----------------------------------------------------------------
+exten => 808,1,record(.gsm,3)
+
+exten => 809,1,answer()
+	same => n,playback(humidity-is)
+	same => n,hangup()
+
+-----------------------------------------------------------------
+-----------------------------------------------------------------
+exten => 808,1,record(light-is.gsm,3)
+
+exten => 809,1,answer()
+	same => n,playback(light-is)
+	same => n,hangup()
+
+-----------------------------------------------------------------
+-----------------------------------------------------------------
+exten => 808,1,record(voltage-is.gsm,3)
+
+exten => 809,1,answer()
+	same => n,playback(voltage-is)
+	same => n,hangup()
+
+-----------------------------------------------------------------
+
+________________________________________________________________________________
+			EXTENSIONES
+		PARA CONSULTA ULTIMO DATO
+_________________________________________________________________________________
+
+[consultas]
+
+
+exten => 900,1,Answer()
+ same => 2,Playback(welcome_cons) ; Un mensaje de bienvenida grabado
+ same => 4,Read(choice,consulta_UD,1) ; Lee la elección del usuario (1, 2, 3 o 4) y reproduce un audio
+ same => 5,NoOp(Opción elegida: ${choice})
+
+ same => n,GotoIf($[${choice} = 1]?temperatura)
+ same => n,GotoIf($[${choice} = 2]?humedad)
+ same => n,GotoIf($[${choice} = 3]?luz)
+ same => n,GotoIf($[${choice} = 4]?voltaje)
+ same => n,Playback(invalido_cs) ; Si la elección no es válida
+ same => n,Hangup()
+
+; Obtener el último valor de temperatura y manejar el valor decimal
+exten => 900,n(temperatura),NoOp(Obteniendo el último valor de temperatura)
+ same => n,Set(result=${ODBC_UltimoDato(temperatura)})
+ same => n,Set(entero=${CUT(result,.,1)}) ; Obtener la parte entera
+ same => n,Set(fraccion=${CUT(result,.,2)}) ; Obtener la parte fraccionaria
+ same => n,Playback(temperature-is) ; Un mensaje grabado que diga "La temperatura en °C es"
+ same => n,SayNumber(${entero}) ; Decir la parte entera de la temperatura
+ same => n,SayDigits(${fraccion}) ; Decir la parte fraccionaria de la temperatura
+ same => n,Hangup()
+
+
+; Obtener el último valor de humedad
+exten => 900,n(humedad),NoOp(Obteniendo el último valor de humedad)
+ same => n,Set(result=${ODBC_UltimoDato(humedad)})
+ same => n,Playback(humidity-is) ; Un mensaje grabado que diga "La humedad es"
+ same => n,SayNumber(${result}) ; Decir el valor de la humedad
+ same => n,Hangup()
+
+; Obtener el último valor de luz
+exten => 900,n(luz),NoOp(Obteniendo el último valor de luz)
+ same => n,Set(result=${ODBC_UltimoDato(luz)})
+ same => n,Playback(light-is) ; Un mensaje grabado que diga "La luz es"
+ same => n,SayNumber(${result}) ; Decir el valor de la luz
+ same => n,Hangup()
+
+; Obtener el último valor de voltaje
+exten => 900,n(voltaje),NoOp(Obteniendo el último valor de voltaje)
+ same => n,Set(result=${ODBC_UltimoDato(voltaje)})
+ same => n,Set(entero=${CUT(result,.,1)}) ; Obtener la parte entera
+ same => n,Set(fraccion=${CUT(result,.,2)}) ; Obtener la parte fraccionaria
+ same => n,Playback(voltage-is) ; Un mensaje grabado que diga "El valor de voltaje es"
+ same => n,SayNumber(${entero}) ; Decir la parte entera del voltaje
+ same => n,SayDigits(${fraccion}) ; Decir la parte fraccionaria del voltaje
+ same => n,Hangup()
+
+
+
+
+
+
+
+______________________________________________________________
+--------------------------------------------------------------
+5.-Formulario - ENCUESTA SATISFACCIÓN DE CLASE;
+--------------------------------------------------------------
+1.bueno
+2.regular
+3.malo 
+
+
+EN LA BASE DE DATOS:
+ACCEDER CON LA DIRECCIÓN IP A PHPMYADMIN:
+http://192.168.220.129/phpmyadmin
+
+---------------------------------------------------------------
+Creación en la base de datos, de una nueva tabla:
+crear una tabla de votación:
+dos columnas para el # de cedula y la opción:
+
+-Ncedula
+-Op
+----------------------------------------------------------------
+
+EN EL SERVIDOR ALMA LINUX:
+
+FUNCION Nueva en:
+cd /etc/asterisk
+nano func_odbc.conf
+
+[Encuesta2]
+dsn=asterisk
+writesql=UPDATE votacion SET Op='${SQL_ESC(${VAL1})}' WHERE Ncedula='${SQL_ESC(${ARG1})}'
+
+ó
+
+writesql=INSERT INTO `votacion` (`Ncedula`, `Op`) VALUES ('1719024256', '1');
+
+
+--------------------------------------------------------------------------
+cd etc/asterisk
+nano extensions.conf
+-------------------------------------------------------------------------
+GRABO OTRO AUDIO PARA LA ENCUESTA:
+
+exten => 808,1,record(audio_op.gsm,3)
+
+exten => 809,1,answer()
+        same => n,playback(audio_op)
+        same => n,hangup()
+
+-------------------------------------------------------------------------
+exten => 808,1,record(audio_encuesta.gsm,3)
+
+exten => 809,1,answer()
+        same => n,playback(audio_encuesta)
+        same => n,hangup()
+
+-------------------------------------------------------------------------
+
+exten => 808,1,record(pet_ced.gsm,3)
+
+exten => 809,1,answer()
+        same => n,playback(pet_ced)
+        same => n,hangup()
+-------------------------------------------------------------------------
+
+
+
+-------------------------------------------------------------------------
+AÑADIMOS OTRA EXTENSION PARA LA ENCUESTA Y GUARDAR EL DATO:
+
+
+exten => 850,1,answer()
+        same => 2,playback(audio_encuesta)
+        same => 3,read(cedula,pet_ced,10)
+        same => n,GotoIf($[${LEN(${cedula})} != 10]?invalid_cedula,1)
+        same => n,read(op,audio_op,1)
+        same => n,GotoIf($[${op} < 1 | ${op} > 3]?invalid_option,1)
+        same => n,NoOp(Número de cédula: ${cedula}, Opción: ${op})
+        same => n,set(result={$ODBC_Encuesta2(${cedula},${op})})
+        same => n,NoOp(Resultado de ODBC_Encuesta: ${result})
+        same => n,Playback(encuesta_f)
+        same => n,hangup()
+
+exten => 850,n(invalid_cedula),playback(invalid_cedula)
+        same => n,hangup()
+
+exten => 850,n(invalid_option),playback(invalido_cs)
+        same => n,hangup()
+
+
+
+
+--------------------------------------------------------------------------
+___________________________________________________________________________
+INGRESO DE VOTACIÓN POR UN SCRIPT EN PHP, CORRIENDOLO POR CONSOLA CON SYSTEM:
+
+SCRIPT PHP, ingreso_bd.php:
+
+alojado en /home/jean/scripts2php
+-----------------------------------------------------------------------------
+<?php
+// Configuración de la base de datos
+$servername = "localhost";
+$username = "comunicaciones";
+$password = "1234";
+$dbname = "sensores";
+
+// Crear conexión
+$conn = new mysqli($servername, $username, $password, $dbname);
+
+// Verificar conexión
+if ($conn->connect_error) {
+    die("Conexión fallida: " . $conn->connect_error);
+}
+
+// Función para insertar datos
+function insertarVotacion($conn, $ncedula, $op) {
+    $sql = "INSERT INTO votacion (Ncedula, Op) VALUES ('$ncedula', '$op')";
+    $stmt = $conn->prepare($sql);
+    if ($stmt === false) {
+        die("Error en la preparación de la consulta: " . $conn->error);
+    }
+
+    // Vincular parámetros
+   //  if (!$stmt->bind_param("ss", $ncedula, $op)) {
+   //      die("Error en bind_param: " . $stmt->error);
+  //   }
+
+    // Ejecutar la sentencia
+    if ($stmt->execute()) {
+        echo "Nuevo registro creado exitosamente\n";
+    } else {
+        echo "Error: " . $stmt->error . "\n";
+    }
+
+    $stmt->close();
+}
+
+// Obtener datos desde la línea de comandos
+if ($argc != 3) {
+    die("Uso: php ingreso_bd.php <Ncedula> <Op>\n");
+}
+
+$ncedula = $argv[1];
+$op = $argv[2];
+
+// Validar datos
+if (strlen($ncedula) == 10 && in_array($op, ['1', '2', '3'])) {
+    insertarVotacion($conn, $ncedula, $op);
+} else {
+    echo "Datos inválidos. Asegúrate de que la cédula tenga 10 números y la opción sea 1, 2 o 3.\n";
+}
+
+$conn->close();
+?>
+
+
+--------------------------------------------------------------------------
+
+PERMISOS PARA CORRER EL SCRIPT:
+
+
+chmod 777 -R /home/jean/scripts2php
+ls -l /home/jean/scripts2php    ---VERIFICO SI TIENE PERMISOS DE EJECUCION
+
+
+___________________________________________________________________________
+
+cd /etc/asterisk/
+nano extensions.conf
+
+
+--------------------------------------------------------------------------------------
+
+exten => 850,1,answer()
+        same => 2,playback(audio_encuesta)
+        same => 3,read(cedula,pet_ced,10)
+        same => n,GotoIf($[${LEN(${cedula})} != 10]?invalid_cedula,1)
+        same => n,read(op,audio_op,1)
+        same => n,GotoIf($[${op} < 1 | ${op} > 3]?invalid_option,1)
+        same => n,NoOp(Número de cédula: ${cedula}, Opción: ${op})
+        same => n,System(php /home/jean/scripts2php/ingreso_bd.php ${cedula} ${op})
+        same => n,NoOp(Resultado de ODBC_Encuesta: ${result})
+        same => n,Playback(encuesta_f)
+        same => n,hangup()
+
+exten => 850,n(invalid_cedula),playback(invalid_cedula)
+        same => n,hangup()
+
+exten => 850,n(invalid_option),playback(invalido_cs)
+        same => n,hangup()
+
+
+
+--------------------------------------------------------------------------------------
+
+AÑADIDURA PARA EL PROYECTO
+
+6.- colocar un chat bot, para permitir hacer alertas y llamadas.
+6.1.- Sistema automatizado de alarma por llamadas en asterisk para niveles de temperatura, humedad y luminosidad
+________________________________________________________________________________________
+
+
+

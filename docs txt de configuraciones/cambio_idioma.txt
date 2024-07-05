@@ -1,0 +1,76 @@
+CAMBIAR IDIOMA A ESPAÑOL:
+ruta de sonidos en asterisk:
+
+/var/lib/asterisk/sounds/es/
+
+cd /usr/src
+sudo wget http://downloads.asterisk.org/pub/telephony/asterisk/asterisk-20-current.tar.gz
+sudo tar -xzf asterisk-20-current.tar.gz
+cd asterisk-20.x.y (sustituye x.y por la versión específica que descargaste)
+sudo ./configure
+
+
+cd /tmp
+wget https://downloads.asterisk.org/pub/telephony/sounds/asterisk-core-sounds-es-ulaw-current.tar.gz
+sudo tar -xzf asterisk-core-sounds-es-ulaw-current.tar.gz -C /var/lib/asterisk/sounds/es
+
+
+En cada contacto en el archivo pjsip.conf:
+
+cd /etc/asterisk
+
+nano pjsip.conf
+
+.-----------------------------------------------------
+[100]
+type=endpoint
+context=default
+disallow=all
+allow=alaw
+aors=100
+auth=100auth
+transport=transporte
+language=es  ; Aquí establecemos el idioma a español
+
+.-----------------------------------------------------
+
+EN LAS EXTENSIONES AÑADIMOS EN EL DEFAULT, ADEMAS EN EL MENÙ QUE SE REQUIERA:
+
+nano extensions.conf
+
+
+-------------------------------------------------------
+
+[default]
+language=es  ; Aquí establecemos el idioma a español
+
+
+-------------------------------------------------------
+
+
+_______________________________________________________________________________________
+				ALMA LINUX:
+				GENERAL
+---------------------------------------------------------------------------------------------------
+
+cd /usr/src
+sudo wget http://downloads.asterisk.org/pub/telephony/sounds/asterisk-core-sounds-es-wav-current.tar.gz
+sudo tar -xzf asterisk-core-sounds-es-wav-current.tar.gz -C /var/lib/asterisk/sounds
+
+
+sudo nano /etc/asterisk/asterisk.conf
+
+-------------------------------------------------------
+[options]
+languageprefix = yes
+defaultlanguage = es
+documentation_language = en_US
+-------------------------------------------------------
+
+
+sudo nano /etc/asterisk/extensions.conf
+
+
+# Asegurarse de que tenga la configuración de idioma en la sección [general]:
+# [general]
+# language = es

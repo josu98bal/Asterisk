@@ -1,0 +1,256 @@
+
+
+TRONCAL - CONEXION ASTERISKS:
+_________________________________________________________
+CONFIGURADO EN MV LEON:
+
+cd /etc/asterisk 
+nano pjsip.conf
+
+---------------------------------------------------
+[serverA]
+type = peer 
+host = 192.168.7.16
+context = from-serverb
+disawoll =all
+allow = ulaw
+---------------------------------------------------
+nano extensions.conf
+
+exten => _2XX,1,Dial(PJSIP/serverA/${EXTEN},30,tT)
+
+
+[from-serverb]
+exten => _1XX,1,Dial(PJSIP/${EXTEN},30,tT)
+
+---------------------------------------------------
+
+asterisk -rvvvv
+CLI> reload
+
+_________________________________________________________
+
+CONFIGURADO EN MV BALSECA:
+
+cd /etc/asterisk 
+nano pjsip.conf
+
+
+---------------------------------------------------
+
+[serverB]
+type = peer
+host = 192.168.7.21
+context = from-servera
+disawoll =all
+allow = ulaw
+---------------------------------------------------
+nano extensions.conf
+
+
+exten => _1XX,1,Dial(PJSIP/serverB/${EXTEN},30,tT)
+	
+
+[from-servera]
+exten => _2XX,1,Dial(PJSIP/${EXTEN},30,tT)
+
+
+
+
+
+_______________________________________________________________________________
+SERVIDOR VM LEON:
+_______________________________________________________________________________
+
+
+[serverB]
+type=endpoint
+context=from-serverb
+disallow=all
+allow=ulaw
+transport=transporte
+aors=serverB
+auth=serverB_auth
+
+[serverB]
+type=aor
+contact=sip:192.168.7.16:5060  ; Dirección IP del Servidor B
+
+[serverB_auth]
+type=auth
+auth_type=userpass
+username=serverA
+password=1234
+
+[serverB]
+type=identify
+endpoint=serverB
+match=192.168.7.16
+
+
+-------------------------------------------------------
+nano extensions.conf
+
+exten => _2XX,1,Dial(PJSIP/serverB/${EXTEN},30,tT)
+
+[from-serverb]
+exten => _1XX,1,Dial(PJSIP/${EXTEN},30,tT)
+exten => _2XX,1,Dial(PJSIP/${EXTEN},30,tT)
+
+
+
+_______________________________________________________________________________
+SERVIDOR VM BALSECA :
+_______________________________________________________________________________
+
+
+[serverA]
+type=endpoint
+context=from-servera
+disallow=all
+allow=ulaw
+transport=transporte
+aors=serverA
+auth=serverA_auth
+
+[serverA]
+type=aor
+contact=sip:192.168.7.21:5060  ; Dirección IP del Servidor A
+
+[serverA_auth]
+type=auth
+auth_type=userpass
+username=serverB
+password=serverB_password
+
+[serverA]
+type=identify
+endpoint=serverA
+match=192.168.7.21
+
+
+
+------------------------------------------------------------------------------------
+nano extensions.conf
+
+
+-------------------------------------------------------------------------------------
+exten => _1XX,1,Dial(PJSIP/serverA/${EXTEN},30,tT)
+
+
+[from-servera]
+exten => _1XX,1,Dial(PJSIP/${EXTEN},30,tT)
+exten => _2XX,1,Dial(PJSIP/${EXTEN},30,tT)
+
+
+-------------------------------------------------------------------------------------
+
+CONFIGURACION POR DEFECTO ANTES EN IAX:
+
+; Specify bandwidth of low, medium, or high to control which codecs are used
+; in general. This setting will restrict codecs used to only those that comply
+; with the bandwidth setting. In most cases, you should set this to 'high' so
+; that high-quality codecs may be used; if set to a lower value, this will
+; degrade call quality, so you probably only want to do this if you have
+; actual significant bandwidth constraints.
+;
+bandwidth=high
+;
+
+;
+
+;
+bandwidth=low
+;
+
+;
+; You can also fine tune codecs here using "allow" and "disallow" clauses with
+; specific codecs.  Use "all" to represent all formats.
+;
+;allow=all
+;disallow=g723.1
+disallow=1pc01
+;allow=gsm
+;
+
+; jitter buffer will set its size to the jitter value plus 40 milliseconds.
+; increasing this value may help if your network normally has low jitter,
+; but occasionally has spikes.
+;
+
+jitterbuffer=no
+;maxjitterbuffer=1000
+;maxjitterinterps=10
+
+
+
+
+
+_______________________________________________________________________
+-----------------------------------------------------------------------
+
+				CONFIGURACION IAX:
+_________________________________________________________________________
+SERVIDOR VM LEON:
+
+nano iax.conf
+
+CAMBIAR EN:
+[general]
+bandwidth=low
+disallow=all
+allow=ulaw
+jitterbuffer=no
+
+AGREGAR:
+[serverB]
+type=friend
+host=192.168.7.217
+username=serverA
+secret=serverA_password
+context=from-serverb
+requirecalltoken=no
+
+
+
+
+nano extensions.conf
+
+
+
+[from-serverb]
+exten => _1XX,1,Dial(IAX2/serverB/${EXTEN},30,tT)
+exten => _2XX,1,Dial(IAX2/serverB/${EXTEN},30,tT)
+
+[default]
+exten => _2XX,1,Dial(IAX2/serverB/${EXTEN},30,tT)
+
+
+_________________________________________________________________________
+SERVIDOR VM BALSECA:
+
+nano iax.conf
+
+[general]
+bandwidth=low
+disallow=all
+allow=ulaw
+jitterbuffer=no
+
+[serverA]
+type=friend
+host=192.168.7.21
+username=serverB
+secret=serverB_password
+context=from-servera
+requirecalltoken=no
+
+
+nano extensions.conf
+
+[from-servera]
+exten => _1XX,1,Dial(IAX2/serverA/${EXTEN},30,tT)
+exten => _2XX,1,Dial(IAX2/serverA/${EXTEN},30,tT)
+
+[default]
+exten => _1XX,1,Dial(IAX2/serverA/${EXTEN},30,tT)
