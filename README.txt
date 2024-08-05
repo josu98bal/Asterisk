@@ -3,10 +3,6 @@
 ## Descripción
 Este proyecto final se enfoca en la implementación y configuración de Asterisk, una plataforma de comunicaciones de código abierto. Se realizan diversas configuraciones y pruebas para establecer comunicaciones entre centralitas, teléfonos IP y dispositivos físicos, además de la integración con un servidor Flask para el control y monitoreo de datos.
 
-## Integrantes
-- Josue Balseca Castro
-- Jean Carlos León
-
 ## Docente
 - Ing. Santiago Manzano
 
