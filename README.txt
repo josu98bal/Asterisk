@@ -6,11 +6,6 @@ Este proyecto final se enfoca en la implementación y configuración de Asterisk
 ## Docente
 - Ing. Santiago Manzano
 
-## Fechas
-- Fecha de Envío: lunes 17 de junio
-- Fecha de Entrega: lunes 24 de junio
-- Período: marzo 2024 - agosto 2024
-
 ## Contenido del Proyecto
 1. **Instalación de Asterisk**: 
     - Actualización del sistema e instalación de dependencias
@@ -99,3 +94,4 @@ Carrera de Telecomunicaciones
 Universidad Técnica de Ambato  
 Ambato, Ecuador  
 2024
+
