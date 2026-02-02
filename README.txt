@@ -87,11 +87,4 @@ Los anexos adicionales están disponibles en la sección 12 del informe.
 ## Contacto
 Para cualquier consulta sobre el proyecto, por favor contacte a los integrantes a través de los canales proporcionados por la universidad.
 
----
-
-Facultad de Ingeniería en Sistemas, Electrónica e Industrial  
-Carrera de Telecomunicaciones  
-Universidad Técnica de Ambato  
-Ambato, Ecuador  
-2024
 
