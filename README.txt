@@ -3,9 +3,6 @@
 ## Descripción
 Este proyecto final se enfoca en la implementación y configuración de Asterisk, una plataforma de comunicaciones de código abierto. Se realizan diversas configuraciones y pruebas para establecer comunicaciones entre centralitas, teléfonos IP y dispositivos físicos, además de la integración con un servidor Flask para el control y monitoreo de datos.
 
-## Docente
-- Ing. Santiago Manzano
-
 ## Contenido del Proyecto
 1. **Instalación de Asterisk**: 
     - Actualización del sistema e instalación de dependencias
@@ -86,5 +83,6 @@ Los anexos adicionales están disponibles en la sección 12 del informe.
 
 ## Contacto
 Para cualquier consulta sobre el proyecto, por favor contacte a los integrantes a través de los canales proporcionados por la universidad.
+
 
 
